@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: manetu-tokenizer-loadtest
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: tokenizer-loadtest
+        image: manetuops/tokenizer-loadtest:latest
+        imagePullPolicy: Always
+        args:
+          - "-u"
+          - "https://ingress.manetu-platform"
+          - "--insecure"
+          - "-c"
+          - "600"
+          - "tokenize"
+          - "-j"
+          - "100000"
+          - "/etc/manetu/loadtest/mrns.list"
+        envFrom:
+          - secretRef:
+              name: manetu-tokenizer-loadtest
+        volumeMounts:
+          - name: data
+            mountPath: "/etc/manetu/loadtest"
+            readOnly: true
+      volumes:
+        - name: data
+          configMap:
+            name: manetu-tokenizer-loadtest
