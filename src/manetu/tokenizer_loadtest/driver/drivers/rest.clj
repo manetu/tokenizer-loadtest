@@ -7,7 +7,7 @@
             [manetu.tokenizer-loadtest.driver.api :as api]
             [manetu.tokenizer-loadtest.utils :refer [->b64 b64-> http-post] :as utils]))
 
-(defn tokenize! [{:keys [url insecure token] :or {insecure false} :as ctx} mode mrn values]
+(defn tokenize! [{:keys [url insecure token] :or {insecure false} :as ctx} mode {:keys [mrn]} values]
   (-> (http-post (str url "/api/v1/token/" (url-encode mrn) "/bulk")
                  {:insecure? insecure
                   :basic-auth ["" token]
@@ -20,10 +20,10 @@
 
 (defrecord RestDriver [ctx]
   api/LoadDriver
-  (tokenize [_ mrn values]
-    (tokenize! ctx "create" mrn values))
-  (translate [_ mrn tokens]
-    (tokenize! ctx "translate" mrn tokens)))
+  (tokenize [_ params values]
+    (tokenize! ctx "create" params values))
+  (translate [_ params tokens]
+    (tokenize! ctx "translate" params tokens)))
 
 (defn create
   [ctx]

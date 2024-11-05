@@ -70,7 +70,7 @@
 
 (defn -app
   [& args]
-  (let [{{:keys [help url driver log-level] :as global-options} :options
+  (let [{{:keys [help url log-level] :as global-options} :options
          global-summary :summary
          :keys [arguments errors]}
         (parse-opts args options-spec :in-order true)]

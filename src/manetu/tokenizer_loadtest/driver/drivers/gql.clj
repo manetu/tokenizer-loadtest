@@ -24,14 +24,16 @@
                   data)))))
 
 (defn -tokenize
-  [ctx mrn values]
-  (log/trace "GQL: tokenize:" mrn values)
+  [ctx {:keys [mrn type] :as params} values]
+  (log/trace "GQL: tokenize:" params values)
   (-> (gql-post ctx
                 {:query (graphql-query
-                          {:operation {:operation/type :mutation
-                                       :operation/name "tokenize"}
-                           :queries [[:tokenize {:vault_mrn mrn :values (mapv (fn [value] {:value (utils/->b64 value)}) values)}
-                                      [:value]]]})})
+                         {:operation {:operation/type :mutation
+                                      :operation/name "tokenize"}
+                          :queries [[:tokenize (-> {:vault_mrn mrn
+                                                    :values (mapv (fn [value] {:value (utils/->b64 value)}) values)}
+                                                   (cond-> (not= type :EPHEMERAL) (assoc :type type)))
+                                     [:value]]]})})
       (p/then (fn [data]
                 (let [values (map :value (:tokenize data))]
                   {:mrn mrn :values values})))))
@@ -42,10 +44,10 @@
 
 (defrecord GraphQLDriver [ctx]
   api/LoadDriver
-  (tokenize [_ mrn values]
-    (-tokenize ctx mrn values))
-  (translate [_ mrn tokens]
-    (-translate ctx mrn tokens)))
+  (tokenize [_ params values]
+    (-tokenize ctx params values))
+  (translate [_ params tokens]
+    (-translate ctx params tokens)))
 
 (defn create
   [ctx]

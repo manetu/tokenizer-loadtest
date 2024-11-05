@@ -39,20 +39,20 @@
   [url args]
   (log/debug "http request:" url args)
   (p/create
-    (fn [resolve reject]
-      (http/post url args
-                 (fn [{:keys [error status] :as r}]
-                   (log/trace "r:" r)
-                   (cond
-                     (some? error)
-                     (reject error)
+   (fn [resolve reject]
+     (http/post url args
+                (fn [{:keys [error status] :as r}]
+                  (log/trace "r:" r)
+                  (cond
+                    (some? error)
+                    (reject error)
 
-                     (> status 299)
-                     (reject (ex-info "bad status" r))
+                    (> status 299)
+                    (reject (ex-info "bad status" r))
 
-                     :default
-                     (try
-                       (resolve (update r :body json/parse-string))
-                       (catch Exception ex
-                         (log/error ex)
-                         (reject ex)))))))))
+                    :default
+                    (try
+                      (resolve (update r :body json/parse-string))
+                      (catch Exception ex
+                        (log/error ex)
+                        (reject ex)))))))))

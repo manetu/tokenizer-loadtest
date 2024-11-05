@@ -7,6 +7,12 @@
             [manetu.tokenizer-loadtest.utils :refer [prep-usage exit version]]
             [manetu.tokenizer-loadtest.actions.tokenize.core :as core]))
 
+(def token-types #{:ephemeral :persistent})
+(defn print-tokentypes []
+  (str "[" (string/join ", " (map name token-types)) "]"))
+(def tokentype-description
+  (str "Select the token type from: " (print-tokentypes)))
+
 (def options-spec
   [["-h" "--help"]
    [nil "--value-min MIN" "The minimum size of values to generate"
@@ -24,7 +30,11 @@
    ["-j" "--jobs JOBS" "The number of jobs to generate"
     :default 100
     :parse-fn parse-long
-    :validate [pos? "Must be a positive integer"]]])
+    :validate [pos? "Must be a positive integer"]]
+   [nil "--token-type TYPE" tokentype-description
+    :default :ephemeral
+    :parse-fn keyword
+    :validate [token-types (str "Must be one of " (print-tokentypes))]]])
 
 (defn usage
   [global-summary local-summary]
@@ -43,7 +53,8 @@
 
 (defn exec
   [global-summary global-options args]
-  (let [{{:keys [help] :as local-options} :options :keys [arguments errors summary]} (parse-opts args options-spec)]
+  (let [{{:keys [help token-type] :as local-options} :options
+         :keys [arguments errors summary]} (parse-opts args options-spec)]
     (cond
 
       help
@@ -53,6 +64,7 @@
       (exit -1 "Error: " (string/join errors))
 
       :else
-      (let [ctx (merge global-options local-options)]
+      (let [ctx (-> (merge global-options local-options)
+                    (assoc :token-type (-> token-type name string/upper-case keyword)))]
         (log/debug "tokenize:" ctx)
         (core/exec ctx (second arguments))))))
