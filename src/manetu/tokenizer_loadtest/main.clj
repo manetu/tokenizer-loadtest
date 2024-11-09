@@ -7,6 +7,7 @@
             [environ.core :refer [env]]
             [manetu.tokenizer-loadtest.driver.core :as driver.core]
             [manetu.tokenizer-loadtest.actions.tokenize.cli :as tokenize]
+            [manetu.tokenizer-loadtest.actions.translate.cli :as translate]
             [manetu.tokenizer-loadtest.utils :refer [prep-usage exit version]])
   (:gen-class))
 
@@ -97,6 +98,7 @@
         (try
           (case (first arguments)
             "tokenize" (tokenize/exec global-summary options arguments)
+            "translate" (translate/exec global-summary options arguments)
             (exit -1 (usage global-summary)))
           (catch Exception ex
             (exit -1 (str "ERROR: " (ex-message ex)))))))))

@@ -32,9 +32,10 @@
     :parse-fn parse-long
     :validate [pos? "Must be a positive integer"]]
    [nil "--token-type TYPE" tokentype-description
-    :default :ephemeral
+    :default "ephemeral"
     :parse-fn keyword
-    :validate [token-types (str "Must be one of " (print-tokentypes))]]])
+    :validate [token-types (str "Must be one of " (print-tokentypes))]]
+   ["-o" "--output FILE" "The path to a file for saving generated tokens compatible as an input to 'translate'"]])
 
 (defn usage
   [global-summary local-summary]

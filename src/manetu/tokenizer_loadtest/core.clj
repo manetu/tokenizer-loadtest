@@ -111,14 +111,15 @@
       0)))
 
 (defn process
-  [{:keys [concurrency] :as ctx} {:keys [nr-records exec] :as options} input-ch]
+  [{:keys [concurrency] :as ctx} {:keys [nr-records exec post-exec] :as options} input-ch]
   (let [output-ch (async/chan (* 4 concurrency))
         mux (async/mult output-ch)]
     (log/info "processing" nr-records "records")
-    (-> (p/all [(t/now)
-                (execute-commands ctx exec output-ch input-ch)
-                (show-progress ctx nr-records mux)
-                (compute-stats ctx nr-records mux)])
+    (-> (p/all (-> [(t/now)
+                    (execute-commands ctx exec output-ch input-ch)
+                    (show-progress ctx nr-records mux)
+                    (compute-stats ctx nr-records mux)]
+                   (cond-> (some? post-exec) (conj (post-exec mux)))))
         (p/then
          (fn [[start _ _ {:keys [successes] :as stats}]]
            (let [end (t/now)
