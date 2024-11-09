@@ -2,6 +2,7 @@
 
 (ns manetu.tokenizer-loadtest.utils
   (:require [clojure.core.async :as async]
+            [clojure.java.io :as io]
             [clojure.string :as string]
             [org.httpkit.client :as http]
             [cheshire.core :as json]
@@ -56,3 +57,11 @@
                       (catch Exception ex
                         (log/error ex)
                         (reject ex)))))))))
+
+(defn file->lines
+  "opens the file at 'path' and reads in all lines to a collection"
+  [path]
+  (with-open [r (-> path
+                    (io/input-stream)
+                    (io/reader))]
+    (doall (line-seq r))))

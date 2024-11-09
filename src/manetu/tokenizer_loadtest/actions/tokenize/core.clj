@@ -2,21 +2,13 @@
 
 (ns manetu.tokenizer-loadtest.actions.tokenize.core
   (:require [clojure.java.io :as io]
-            [clojure.core.async :as async]
+            [clojure.core.async :refer [<!!] :as async]
             [taoensso.timbre :as log]
             [promesa.core :as p]
             [crypto.random]
             [manetu.tokenizer-loadtest.core :as core]
-            [manetu.tokenizer-loadtest.utils :refer [async-map]]
+            [manetu.tokenizer-loadtest.utils :refer [async-map file->lines]]
             [manetu.tokenizer-loadtest.driver.api :as driver.api]))
-
-(defn file->lines
-  "opens the file at 'path' and reads in all lines to a collection"
-  [path]
-  (with-open [r (-> path
-                    (io/input-stream)
-                    (io/reader))]
-    (doall (line-seq r))))
 
 (defn generate-values
   [{:keys [tokens-per-job value-min] :as ctx} mrn]
@@ -26,13 +18,31 @@
   [{:keys [driver token-type] :as ctx} {:keys [mrn values] :as record}]
   (-> (driver.api/tokenize driver {:mrn mrn :type token-type} values)
       (p/then (fn [tokens]
+                (log/debug "tokens:" tokens)
                 (assoc record :tokens tokens)))))
 
-(defn exec [{:keys [jobs] :as ctx} vault-list]
+(defn save-output
+  [{:keys [output concurrency token-type]} mux]
+  (log/debug "saving tokens to:" output)
+  (let [ch (async/chan (* 4 concurrency))]
+    (async/tap mux ch)
+    (p/create
+     (fn [resolve reject]
+       (async/thread
+         (with-open [wrtr (io/writer output)]
+           (loop []
+             (when-let [{{:keys [mrn tokens]} :result :as m} (<!! ch)]
+               (log/debug "saving:" m)
+               (.write wrtr (str (pr-str {:mrn mrn :context-embedded? (not= token-type :EPHEMERAL) :tokens tokens}) "\n"))
+               (recur)))
+           (resolve true)))))))
+
+(defn exec [{:keys [jobs output] :as ctx} vault-list]
   (log/debug "using vault-list:" vault-list)
   (let [vaults (file->lines vault-list)]
     (log/debug "ctx:" ctx)
-    (log/debug "found vaults:" vaults)
+    (log/trace "found vaults:" vaults)
     @(->> (async/to-chan! (take jobs (cycle vaults)))
           (async-map (partial generate-values ctx))
-          (core/process ctx {:nr-records jobs :exec job-exec}))))
+          (core/process ctx (-> {:nr-records jobs :exec job-exec}
+                                (cond-> (some? output) (assoc :post-exec (partial save-output ctx))))))))

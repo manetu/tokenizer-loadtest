@@ -34,13 +34,19 @@
                                                     :values (mapv (fn [value] {:value (utils/->b64 value)}) values)}
                                                    (cond-> (not= type :EPHEMERAL) (assoc :type type)))
                                      [:value]]]})})
-      (p/then (fn [data]
-                (let [values (map :value (:tokenize data))]
-                  {:mrn mrn :values values})))))
+      (p/then (fn [{:strs [tokenize] :as data}]
+                (map #(get % "value") tokenize)))))
 
-(defn -translate [ctx mrn tokens]
+(defn -translate
+  [ctx {:keys [mrn context-embedded?]} tokens]
   (log/trace "GQL: translate:" mrn tokens)
-  (p/rejected (ex-info "not-implemented" {})))
+  (-> (gql-post ctx
+                {:query (graphql-query
+                         {:queries [[:translate_tokens (-> {:tokens (mapv (fn [value] {:value value}) tokens)}
+                                                           (cond-> (not context-embedded?) (assoc :vault_mrn mrn)))
+                                     [:value]]]})})
+      (p/then (fn [{:strs [translate_tokens] :as data}]
+                (map #(get % "value") translate_tokens)))))
 
 (defrecord GraphQLDriver [ctx]
   api/LoadDriver
